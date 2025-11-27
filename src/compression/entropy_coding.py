@@ -625,6 +625,13 @@ def ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precision,
         precision, coding_shape, overflow_width, **kwargs)
 
 @time_this
+def vec_ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precision, 
+    coding_shape, overflow_width=OVERFLOW_WIDTH, use_cpp=True, **kwargs):
+    # There is no C++ vectorized decoder, so we always use the Python version.
+    return _vec_ans_index_decoder_python(encoded, indices, cdf, cdf_length, cdf_offset, 
+        precision, coding_shape, overflow_width, **kwargs)
+
+@time_this
 def _vec_ans_index_decoder_python(encoded, indices, cdf, cdf_length, cdf_offset, precision, 
     coding_shape, overflow_width=OVERFLOW_WIDTH, **kwargs):
 
@@ -669,7 +676,7 @@ def _vec_ans_index_decoder_python(encoded, indices, cdf, cdf_length, cdf_offset,
         padded_shape = indices.shape
         assert (indices.shape[2] % PATCH_SIZE[0] == 0) and (indices.shape[3] % PATCH_SIZE[1] == 0)
         cdf_index, unfolded_shape = compression_utils.decompose(indices, n_channels)
-        coding_shape = values.shape[1:]
+        # The coding_shape is already passed as an argument
         assert coding_shape == cdf_index.shape[1:]
 
 
