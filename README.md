@@ -23,11 +23,15 @@ Before you begin, ensure you have the following software installed:
 
 ## 1. Setup
 
-First, clone the repository and navigate into the project directory:
+First, clone the repository and its submodules. Navigate into the project directory:
 
 ```bash
-git clone https://github.com/mea432/hific.git
+# Clone the repository and submodules
+git clone --recursive https://github.com/mea432/hific.git
 cd hific
+
+# If you have already cloned the repository without the --recursive flag, run this command:
+# git submodule update --init --recursive
 ```
 
 Next, install the required Python packages:
@@ -116,4 +120,3 @@ This is a PyTorch port of the original work. Please cite the original paper if y
 ## License
 
 This project is licensed under the Apache-2.0 License. See the [LICENSE](LICENSE) file for details.
-
