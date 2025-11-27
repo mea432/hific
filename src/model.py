@@ -35,7 +35,7 @@ Disc_out= namedtuple("disc_out",
 class Model(nn.Module):
 
     def __init__(self, args, logger, storage_train=defaultdict(list), storage_test=defaultdict(list), model_mode=ModelModes.TRAINING, 
-            model_type=ModelTypes.COMPRESSION):
+            model_type=ModelTypes.COMPRESSION, use_cpp=True):
         super(Model, self).__init__()
 
         """
@@ -49,6 +49,7 @@ class Model(nn.Module):
         self.storage_train = storage_train
         self.storage_test = storage_test
         self.step_counter = 0
+        self.use_cpp = use_cpp
 
         if self.args.use_latent_mixture_model is True:
             self.args.latent_channels = self.args.latent_channels_DLMM
@@ -77,7 +78,7 @@ class Model(nn.Module):
                 likelihood_type=self.args.likelihood_type, mixture_components=self.args.mixture_components, entropy_code=self.entropy_code)
         else:
             self.Hyperprior = hyperprior.Hyperprior(bottleneck_capacity=self.args.latent_channels,
-                likelihood_type=self.args.likelihood_type, entropy_code=self.entropy_code)
+                likelihood_type=self.args.likelihood_type, entropy_code=self.entropy_code, use_cpp=self.use_cpp)
 
         self.amortization_models = [self.Encoder, self.Generator]
         self.amortization_models.extend(self.Hyperprior.amortization_models)
@@ -289,7 +290,7 @@ class Model(nn.Module):
             factor = 2 ** n_hyperencoder_downsamples
             y = utils.pad_factor(y, y.size()[2:], factor)
 
-        compression_output = self.Hyperprior.compress_forward(y, spatial_shape)
+        compression_output = self.Hyperprior.compress_forward(y, spatial_shape, use_cpp=self.use_cpp)
         attained_hbpp = 32 * len(compression_output.hyperlatents_encoded) / np.prod(spatial_shape)
         attained_lbpp = 32 * len(compression_output.latents_encoded) / np.prod(spatial_shape)
         attained_bpp = 32 * ((len(compression_output.hyperlatents_encoded) +  
@@ -323,7 +324,7 @@ class Model(nn.Module):
         assert self.model_mode == ModelModes.EVALUATION and (self.training is False), (
             f'Set model mode to {ModelModes.EVALUATION} for decompression.')
 
-        latents_decoded = self.Hyperprior.decompress_forward(compression_output, device=utils.get_device())
+        latents_decoded = self.Hyperprior.decompress_forward(compression_output, device=utils.get_device(), use_cpp=self.use_cpp)
 
         # Use quantized latents as input to G
         reconstruction = self.Generator(latents_decoded)
@@ -461,4 +462,3 @@ if __name__ == '__main__':
         compression_loss, disc_loss = losses['compression'], losses['disc']
 
     logger.info('Delta t {:.3f}s'.format(time.time() - start_time))
-

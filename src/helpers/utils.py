@@ -8,6 +8,7 @@ import json
 import os, time, datetime
 import logging
 import itertools
+import functools
 
 from collections import OrderedDict
 from torchvision.utils import save_image
@@ -168,11 +169,11 @@ def save_model(model, optimizers, mean_epoch_loss, epoch, device, args, logger, 
    
 
 def load_model(save_path, logger, device, model_type=None, model_mode=None, current_args_d=None, prediction=True, 
-    strict=False, silent=False):
+    strict=False, silent=False, use_cpp=True):
 
     start_time = time.time()
     from src.model import Model
-    checkpoint = torch.load(save_path)
+    checkpoint = torch.load(save_path, map_location=device)
     loaded_args_d = checkpoint['args']
 
     args = Struct(**loaded_args_d)
@@ -208,7 +209,7 @@ def load_model(save_path, logger, device, model_type=None, model_mode=None, curr
         args.sample_noise = False
         args.noise_dim = 0
 
-    model = Model(args, logger, model_type=model_type, model_mode=model_mode)
+    model = Model(args, logger, model_type=model_type, model_mode=model_mode, use_cpp=use_cpp)
 
     # `strict` False if warmstarting
     model.load_state_dict(checkpoint['model_state_dict'], strict=strict)
@@ -354,19 +355,19 @@ def log(model, storage, epoch, idx, mean_epoch_loss, current_loss, best_loss, st
     else:
         report_f("Epoch {} | Mean epoch comp. loss: {:.3f} | Current comp. loss: {:.3f} | Improved: {}".format(epoch, 
                  mean_epoch_loss, current_loss, improved))
-    report_f('========>')
+    report_f('=========>')
     report_f("Rate-Distortion:")
     report_f("Weighted R-D: {:.3f} | Weighted Rate: {:.3f} | Weighted Distortion: {:.3f} | Weighted Perceptual: {:.3f} | "
              "Distortion: {:.3f} | Rate Penalty: {:.3f}".format(storage['weighted_R_D'][-1],
              storage['weighted_rate'][-1], storage['weighted_distortion'][-1], storage['weighted_perceptual'][-1],
              storage['distortion'][-1], storage['rate_penalty'][-1]))
-    report_f('========>')
+    report_f('=========>')
     report_f("Rate Breakdown")
     report_f("avg. original bpp: {:.3f} | n_bpp (total): {:.3f} | q_bpp (total): {:.3f} | n_bpp (latent): {:.3f} | q_bpp (latent): {:.3f} | "
              "n_bpp (hyp-latent): {:.3f} | q_bpp (hyp-latent): {:.3f}".format(avg_bpp, storage['n_rate'][-1], storage['q_rate'][-1], 
              storage['n_rate_latent'][-1], storage['q_rate_latent'][-1], storage['n_rate_hyperlatent'][-1], storage['q_rate_hyperlatent'][-1]))
     if model.use_discriminator is True:
-        report_f('========>')
+        report_f('=========>')
         report_f("Generator-Discriminator:")
         report_f("G Loss: {:.3f} | D Loss: {:.3f} | D(gen): {:.3f} | D(real): {:.3f}".format(storage['gen_loss'][-1],
                 storage['disc_loss'][-1], storage['D_gen'][-1], storage['D_real'][-1]))
@@ -377,7 +378,7 @@ def save_images(writer, step, real, decoded, fname):
 
     imgs = torch.cat((real,decoded), dim=0)
     save_image(imgs, fname, nrow=4, normalize=True, scale_each=True)
-    writer.add_images('gen_recon', imgs, step)
+    writer.add_images('gen_recon',imgs, step)
 
 def add_noise(x):
     """
@@ -388,3 +389,13 @@ def add_noise(x):
         x = x * 255 + noise
         x = x / 256
     return x
+
+def time_this(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Function {func.__name__} took {end_time - start_time:.4f} seconds.")
+        return result
+    return wrapper

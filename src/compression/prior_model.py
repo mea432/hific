@@ -8,6 +8,7 @@ from tqdm import tqdm
 from src.helpers import maths
 from src.compression import entropy_models, entropy_coding
 from src.compression import compression_utils
+import src.helpers.utils as utils
 
 lower_bound_toward = maths.LowerBoundToward.apply
 
@@ -76,32 +77,54 @@ class PriorEntropyModel(entropy_models.ContinuousEntropyModel):
 
     def build_tables(self, **kwargs):
 
-        multiplier = -self.standardized_quantile(self.tail_mass / 2)
-        pmf_center = torch.ceil(self.scale_table * multiplier).to(torch.int32)
-        pmf_length = 2 * pmf_center + 1  # [n_scales]
-        max_length = torch.max(pmf_length).item()
+        offsets = 0.
 
-        samples = torch.abs(torch.arange(max_length).int() - pmf_center[:, None]).float()
-        samples_scale = self.scale_table.unsqueeze(1).float()
+        # Pass scalar values from scale_table to lower_tail and upper_tail
+        lower_tail_values = [self.distribution.lower_tail(self.tail_mass, mean=0., scale=s.item()) for s in self.scale_table]
+        upper_tail_values = [self.distribution.upper_tail(self.tail_mass, mean=0., scale=s.item()) for s in self.scale_table]
 
-        upper = self.standardized_CDF((.5 - samples) / samples_scale)
-        lower = self.standardized_CDF((-.5 - samples) / samples_scale)
-        pmf = upper - lower  # [n_scales, max_length]
+        lower_tail = torch.Tensor(lower_tail_values).cpu()
+        upper_tail = torch.Tensor(upper_tail_values).cpu()
 
-        # [n_scales]
-        tail_mass = 2 * lower[:, :1]
-        cdf_offset = -pmf_center  # How far away we have to go to pass the tail mass
+
+        # Largest distance observed between lower tail and median, 
+        # and between median and upper tail.
+        minima = offsets - lower_tail
+        minima = torch.ceil(minima).to(torch.int32)
+        minima = torch.clamp(minima, min=0)
+
+        maxima = upper_tail - offsets
+        maxima = torch.ceil(maxima).to(torch.int32)
+        maxima = torch.clamp(maxima, min=0)
+
+        # PMF starting positions and lengths
+        # pmf_start = offsets - minima.to(self.distribution.dtype)
+        pmf_start = offsets - minima.to(torch.float32)
+        pmf_length = maxima + minima + 1  # Symmetric for Gaussian
+
+        max_length = pmf_length.max()
+        samples = torch.arange(max_length.item(), dtype=self.distribution.dtype)
+
+        # Broadcast to [n_channels,1,*] format
+        device = utils.get_device()
+        samples = samples.view(1,-1) + pmf_start.view(-1,1,1)
+        pmf = self.distribution.likelihood(samples.to(device), collapsed_format=True, mean=0., scale=self.scale_table.view(-1,1,1)).cpu()
+
+        # [n_scales, max_length]
+        pmf = torch.squeeze(pmf)
+
         cdf_length = pmf_length + 2
+        cdf_offset = -minima
+
         cdf_length = cdf_length.to(torch.int32)
         cdf_offset = cdf_offset.to(torch.int32)
 
-        # CDF shape [n_scales,  max_length + 2] - account for fenceposts + overflow
+        # CDF shape [n_scales, max_length + 2] - account for fenceposts + overflow
         CDF = torch.zeros((len(pmf_length), max_length + 2), dtype=torch.int32)
-        for n, (pmf_, pmf_length_, tail_) in enumerate((zip(tqdm(pmf), pmf_length, tail_mass))): 
+        for n, (pmf_, pmf_length_) in enumerate(zip(tqdm(pmf), pmf_length)): 
             pmf_ = pmf_[:pmf_length_]  # [max_length]
             overflow = torch.clamp(1. - torch.sum(pmf_, dim=0, keepdim=True), min=0.)  
-            # pmf_ = torch.cat((pmf_, overflow), dim=0)
-            pmf_ = torch.cat((pmf_, tail_), dim=0)
+            pmf_ = torch.cat((pmf_, torch.Tensor([self.tail_mass])), dim=0)
 
             cdf_ = maths.pmf_to_quantized_cdf(pmf_, self.precision)
             cdf_ = F.pad(cdf_, (0, max_length - pmf_length_), mode='constant', value=0)
@@ -155,7 +178,7 @@ class PriorEntropyModel(entropy_models.ContinuousEntropyModel):
 
         return indices      
 
-    def compress(self, bottleneck, means, scales, vectorize=False, block_encode=True):
+    def compress(self, bottleneck, means, scales, vectorize=False, block_encode=True, use_cpp=True):
         """
         Compresses floating-point tensors to bitsrings.
 
@@ -195,13 +218,13 @@ class PriorEntropyModel(entropy_models.ContinuousEntropyModel):
 
         encoded, coding_shape = compression_utils.ans_compress(symbols, indices, cdf, cdf_length, cdf_offset,
             coding_shape, precision=self.precision, vectorize=vectorize, 
-            block_encode=block_encode)
+            block_encode=block_encode, use_cpp=use_cpp)
 
         return encoded, coding_shape, rounded
 
     
     def decompress(self, encoded, means, scales, broadcast_shape, coding_shape, vectorize=False, 
-        block_decode=True):
+        block_decode=True, use_cpp=True):
         """
         Decompress bitstrings to floating-point tensors.
 
@@ -238,7 +261,8 @@ class PriorEntropyModel(entropy_models.ContinuousEntropyModel):
         cdf_offset = self.CDF_offset.cpu().numpy()
 
         decoded = compression_utils.ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset,
-            coding_shape, precision=self.precision, vectorize=vectorize, block_decode=block_decode)
+            coding_shape, precision=self.precision, vectorize=vectorize, block_decode=block_decode,
+            use_cpp=use_cpp)
 
         symbols = torch.Tensor(decoded)
         symbols = torch.reshape(symbols, symbols_shape)
@@ -287,18 +311,25 @@ class PriorDensity(nn.Module):
         """
         return mean.detach()
 
-    def lower_tail(self, tail_mass, mean, scale):
+    def lower_tail(self, tail_mass, mean=0., scale=1.):
         tail_mass = float(tail_mass)
+        # Handle case where scale is a tensor or a float
+        # Ensure scale is converted to a scalar if it's a 0-dim tensor
+        if isinstance(scale, torch.Tensor):
+            scale = scale.item() if scale.dim() == 0 else scale.cpu().numpy()
         lt = self.quantile(0.5 * tail_mass, mean=mean, scale=scale)
         return lt
 
-    def upper_tail(self, tail_mass, mean, scale):
+    def upper_tail(self, tail_mass, mean=0., scale=1.):
         tail_mass = float(tail_mass)
+        # Handle case where scale is a tensor or a float
+        # Ensure scale is converted to a scalar if it's a 0-dim tensor
+        if isinstance(scale, torch.Tensor):
+            scale = scale.item() if scale.dim() == 0 else scale.cpu().numpy()
         ut = self.quantile(1. - 0.5 * tail_mass, mean=mean, scale=scale)
         return ut
 
-    def likelihood(self, x, mean, scale, **kwargs):
-
+    def likelihood(self, x, mean, scale, collapsed_format=False, **kwargs):
         # Assumes 1 - CDF(x) = CDF(-x)
         x = x - mean
         x = torch.abs(x)

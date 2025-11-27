@@ -20,6 +20,9 @@ from src.helpers import maths, utils
 from src.compression import ans as vrans
 from src.compression import compression_utils
 
+# Import the time_this decorator
+from src.helpers.utils import time_this
+
 Codec = namedtuple('Codec', ['push', 'pop'])
 cast2u64 = lambda x: np.array(x, dtype=np.uint64)
 
@@ -257,7 +260,32 @@ def ans_index_encoder_flush(instructions, precision, overflow_width=OVERFLOW_WID
     print('Symbol compressed to {:.3f} bits.'.format(32 * message_length))
     return encoded
 
-def ans_index_encoder(symbols, indices, cdf, cdf_length, cdf_offset, precision, 
+import hific_cpp
+
+@time_this
+def ans_index_encoder_cpp(symbols, indices, cdf, cdf_length, cdf_offset, precision, 
+    overflow_width=OVERFLOW_WIDTH, **kwargs):
+    
+    instructions, coding_shape = hific_cpp.ans_index_buffered_encoder( # The C++ version returns coding_shape.
+        symbols.astype(np.int32).flatten(),
+        indices.astype(np.int32).flatten(),
+        cdf.astype(np.uint64),
+        cdf_length.astype(np.int32),
+        cdf_offset.astype(np.int32),
+        precision,
+        overflow_width
+    )
+
+    encoded = hific_cpp.ans_index_encoder_flush(
+        instructions,
+        precision,
+        overflow_width
+    )
+
+    return encoded, symbols.shape[1:]
+
+@time_this
+def _ans_index_encoder_python(symbols, indices, cdf, cdf_length, cdf_offset, precision, 
     overflow_width=OVERFLOW_WIDTH, **kwargs):
 
     instructions, coding_shape = ans_index_buffered_encoder(symbols, indices, cdf,
@@ -266,6 +294,17 @@ def ans_index_encoder(symbols, indices, cdf, cdf_length, cdf_offset, precision,
     encoded = ans_index_encoder_flush(instructions, precision, overflow_width)
 
     return encoded, coding_shape
+
+@time_this
+def ans_index_encoder(symbols, indices, cdf, cdf_length, cdf_offset, precision, 
+    overflow_width=OVERFLOW_WIDTH, use_cpp=True, **kwargs):
+
+    if use_cpp:
+        return ans_index_encoder_cpp(symbols, indices, cdf, cdf_length, cdf_offset,
+            precision, overflow_width, **kwargs)
+    else:
+        return _ans_index_encoder_python(symbols, indices, cdf, cdf_length, cdf_offset,
+            precision, overflow_width, **kwargs)
 
 
 def vec_ans_index_buffered_encoder(symbols, indices, cdf, cdf_length, cdf_offset, precision, 
@@ -476,7 +515,23 @@ def vec_ans_index_encoder(symbols, indices, cdf, cdf_length, cdf_offset, precisi
 
     return encoded, coding_shape
 
-def ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precision,
+@time_this
+def ans_index_decoder_cpp(encoded, indices, cdf, cdf_length, cdf_offset, precision,
+    original_coding_shape, overflow_width=OVERFLOW_WIDTH, **kwargs):
+
+    decoded = hific_cpp.ans_index_decoder(
+        encoded,
+        indices.astype(np.int32).flatten(),
+        cdf.astype(np.uint64),
+        cdf_length.astype(np.int32),
+        cdf_offset.astype(np.int32),
+        precision,
+        overflow_width
+    )
+    return decoded.reshape(original_coding_shape)
+
+@time_this
+def _ans_index_decoder_python(encoded, indices, cdf, cdf_length, cdf_offset, precision,
     coding_shape, overflow_width=OVERFLOW_WIDTH, **kwargs):
 
     """
@@ -555,10 +610,22 @@ def ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precision,
         symbol = value + cdf_offset[cdf_index]
         decoded[i] = symbol
 
-    return decoded
+    return decoded.reshape(coding_shape) # Reshape to the coding_shape
 
 
-def vec_ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precision, 
+@time_this
+def ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precision,
+    coding_shape, overflow_width=OVERFLOW_WIDTH, use_cpp=True, **kwargs):
+
+    if use_cpp:
+        return ans_index_decoder_cpp(encoded, indices, cdf, cdf_length, cdf_offset,
+            precision, coding_shape, overflow_width, **kwargs)
+    
+    return _ans_index_decoder_python(encoded, indices, cdf, cdf_length, cdf_offset, 
+        precision, coding_shape, overflow_width, **kwargs)
+
+@time_this
+def _vec_ans_index_decoder_python(encoded, indices, cdf, cdf_length, cdf_offset, precision, 
     coding_shape, overflow_width=OVERFLOW_WIDTH, **kwargs):
 
     """
@@ -602,7 +669,8 @@ def vec_ans_index_decoder(encoded, indices, cdf, cdf_length, cdf_offset, precisi
         padded_shape = indices.shape
         assert (indices.shape[2] % PATCH_SIZE[0] == 0) and (indices.shape[3] % PATCH_SIZE[1] == 0)
         cdf_index, unfolded_shape = compression_utils.decompose(indices, n_channels)
-        coding_shape = cdf_index.shape[1:]
+        coding_shape = values.shape[1:]
+        assert coding_shape == cdf_index.shape[1:]
 
 
     symbols = []

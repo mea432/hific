@@ -13,7 +13,7 @@ from src.helpers import utils
 from src.compression import entropy_coding
 
 # Random bits for fencing in bitstream
-_MAGIC_VALUE_SEP = b'\x46\xE2\x84\x92'
+_MAGIC_VALUE_SEP = b'\x46\xe2\x84\x92'
 
 PATCH_SIZE = entropy_coding.PATCH_SIZE
 
@@ -128,7 +128,7 @@ def check_argument_shapes(cdf, cdf_length, cdf_offset):
 
 
 def ans_compress(symbols, indices, cdf, cdf_length, cdf_offset, coding_shape,
-    precision, vectorize=False, block_encode=True):
+    precision, vectorize=False, block_encode=True, use_cpp=True):
 
     if vectorize is True:  # Inputs must be identically shaped
 
@@ -140,6 +140,7 @@ def ans_compress(symbols, indices, cdf, cdf_length, cdf_offset, coding_shape,
             cdf_offset=cdf_offset,  # [n_scales]
             precision=precision,
             coding_shape=coding_shape,
+            use_cpp=use_cpp,
         )
 
     else:
@@ -153,6 +154,7 @@ def ans_compress(symbols, indices, cdf, cdf_length, cdf_offset, coding_shape,
                 cdf_offset=cdf_offset,  # [n_scales]
                 precision=precision,
                 coding_shape=coding_shape,
+                use_cpp=use_cpp,
             )
             
         else: 
@@ -169,6 +171,7 @@ def ans_compress(symbols, indices, cdf, cdf_length, cdf_offset, coding_shape,
                     cdf_offset=cdf_offset,  # [n_scales]
                     precision=precision,
                     coding_shape=coding_shape,
+                    use_cpp=use_cpp,
                 )
 
                 encoded.append(coded_string)
@@ -177,7 +180,7 @@ def ans_compress(symbols, indices, cdf, cdf_length, cdf_offset, coding_shape,
 
 
 def ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset, coding_shape,
-    precision, vectorize=False, block_decode=True):
+    precision, vectorize=False, block_decode=True, use_cpp=True):
 
     if vectorize is True:  # Inputs must be identically shaped
 
@@ -189,6 +192,7 @@ def ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset, coding_shape,
             cdf_offset=cdf_offset,
             precision=precision,
             coding_shape=coding_shape,
+            use_cpp=use_cpp,
         )
 
     else:
@@ -203,6 +207,7 @@ def ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset, coding_shape,
                 cdf_offset=cdf_offset,  # [n_scales]
                 precision=precision,
                 coding_shape=coding_shape,
+                use_cpp=use_cpp,
             )
 
         else: 
@@ -221,6 +226,7 @@ def ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset, coding_shape,
                     cdf_offset=cdf_offset,  # [n_scales]
                     precision=precision,
                     coding_shape=coding_shape,
+                    use_cpp=use_cpp,
                 )
 
                 decoded.append(coded_string)
@@ -232,7 +238,6 @@ def ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset, coding_shape,
 def compose(*args):
     """
     :param args: a list of functions
-    :return: composition of the functions
     """
     def compose2(f1, f2):
         def composed(*args_c, **kwargs_c):

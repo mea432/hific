@@ -143,7 +143,7 @@ class Hyperprior(CodingModel):
     
     def __init__(self, bottleneck_capacity=220, hyperlatent_filters=LARGE_HYPERLATENT_FILTERS, 
         mode='large', likelihood_type='gaussian', scale_lower_bound=MIN_SCALE, entropy_code=False,
-        vectorize_encoding=True, block_encode=True):
+        vectorize_encoding=True, block_encode=True, use_cpp=True):
 
         """
         Introduces probabilistic model over latents of 
@@ -191,6 +191,7 @@ class Hyperprior(CodingModel):
             self.index_tables = self.prior_entropy_model.scale_table_tensor
             self.vectorize_encoding = vectorize_encoding
             self.block_encode = block_encode
+            self.use_cpp = use_cpp
 
     def compress_forward(self, latents, spatial_shape, **kwargs):
 
@@ -206,10 +207,10 @@ class Hyperprior(CodingModel):
 
         # Compress, then decompress hyperlatents
         hyperlatents_encoded, hyper_coding_shape, _ = self.hyperprior_entropy_model.compress(hyperlatents,
-            vectorize=self.vectorize_encoding, block_encode=self.block_encode)
+            vectorize=self.vectorize_encoding, block_encode=self.block_encode, use_cpp=self.use_cpp)
         hyperlatents_decoded, _ = self.hyperprior_entropy_model.decompress(hyperlatents_encoded,
             batch_shape=batch_shape, broadcast_shape=hyperlatent_spatial_shape,
-            coding_shape=hyper_coding_shape, vectorize=self.vectorize_encoding, block_decode=self.block_encode)
+            coding_shape=hyper_coding_shape, vectorize=self.vectorize_encoding, block_decode=self.block_encode, use_cpp=self.use_cpp)
         hyperlatents_decoded = hyperlatents_decoded.to(latents)
 
         # Recover latent statistics from compressed hyperlatents
@@ -219,7 +220,7 @@ class Hyperprior(CodingModel):
 
         # Use latent statistics to build indexed probability tables, and compress latents
         latents_encoded, latent_coding_shape, _ = self.prior_entropy_model.compress(latents, means=latent_means,
-            scales=latent_scales, vectorize=self.vectorize_encoding, block_encode=self.block_encode)
+            scales=latent_scales, vectorize=self.vectorize_encoding, block_encode=self.block_encode, use_cpp=self.use_cpp)
 
         # Estimate Shannon entropies for latents
         latent_agg = self.prior_entropy_model._estimate_compression_bits(latents,
@@ -245,7 +246,7 @@ class Hyperprior(CodingModel):
 
         return compression_output
 
-    def decompress_forward(self, compression_output, device):
+    def decompress_forward(self, compression_output, device, use_cpp=True):
 
         hyperlatents_encoded = compression_output.hyperlatents_encoded
         latents_encoded = compression_output.latents_encoded
@@ -256,7 +257,7 @@ class Hyperprior(CodingModel):
         hyperlatents_decoded, _ = self.hyperprior_entropy_model.decompress(hyperlatents_encoded,
             batch_shape=batch_shape, broadcast_shape=hyperlatent_spatial_shape,
             coding_shape=compression_output.hyper_coding_shape, vectorize=self.vectorize_encoding,
-            block_decode=self.block_encode)
+            block_decode=self.block_encode, use_cpp=use_cpp)
         hyperlatents_decoded = hyperlatents_decoded.to(device)
 
         # Recover latent statistics from compressed hyperlatents
@@ -269,7 +270,7 @@ class Hyperprior(CodingModel):
         latents_decoded, _ = self.prior_entropy_model.decompress(latents_encoded, means=latent_means,
             scales=latent_scales, broadcast_shape=latent_spatial_shape,
             coding_shape=compression_output.latent_coding_shape, vectorize=self.vectorize_encoding, 
-            block_decode=self.block_encode)
+            block_decode=self.block_encode, use_cpp=use_cpp)
 
         return latents_decoded.to(device)
 
@@ -337,7 +338,7 @@ Discretized logistic mixture model.
 """
 
 
-class HyperpriorDLMM(CodingModel):
+class HyperpriorDLMM(nn.Module):
     
     def __init__(self, bottleneck_capacity=64, hyperlatent_filters=LARGE_HYPERLATENT_FILTERS, mode='large',
         likelihood_type='gaussian', scale_lower_bound=MIN_SCALE, mixture_components=4, 
@@ -349,7 +350,7 @@ class HyperpriorDLMM(CodingModel):
         The hyperprior over the standard latents is modelled as
         a non-parametric, fully factorized density.
         """
-        super(HyperpriorDLMM, self).__init__(n_channels=bottleneck_capacity)
+        super(HyperpriorDLMM, self).__init__()
         
         assert bottleneck_capacity <= 128, 'Will probably run out of memory!'
         self.bottleneck_capacity = bottleneck_capacity

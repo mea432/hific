@@ -138,7 +138,7 @@ class HyperpriorEntropyModel(entropy_models.ContinuousEntropyModel):
         indices = indices.repeat(1, *broadcast_shape)
         return indices
 
-    def compress(self, bottleneck, block_encode=True, vectorize=False):
+    def compress(self, bottleneck, block_encode=True, vectorize=False, use_cpp=True):
         """
         Compresses floating-point tensors to bitsrings.
 
@@ -193,13 +193,13 @@ class HyperpriorEntropyModel(entropy_models.ContinuousEntropyModel):
 
         encoded, coding_shape = compression_utils.ans_compress(symbols, indices, cdf, cdf_length, cdf_offset,
             coding_shape, precision=self.precision, vectorize=vectorize, 
-            block_encode=block_encode)
+            block_encode=block_encode, use_cpp=use_cpp)
 
         return encoded, coding_shape, rounded
 
     
     def decompress(self, encoded, batch_shape, broadcast_shape, coding_shape, vectorize=False, 
-        block_decode=True):
+        block_decode=True, use_cpp=True):
         """
         Decompress bitstrings to floating-point tensors.
 
@@ -239,7 +239,8 @@ class HyperpriorEntropyModel(entropy_models.ContinuousEntropyModel):
         cdf_offset = self.CDF_offset.cpu().numpy()
 
         decoded = compression_utils.ans_decompress(encoded, indices, cdf, cdf_length, cdf_offset,
-            coding_shape, precision=self.precision, vectorize=vectorize, block_decode=block_decode)
+            coding_shape, precision=self.precision, vectorize=vectorize, block_decode=block_decode,
+            use_cpp=use_cpp)
 
         symbols = torch.Tensor(decoded)
         symbols = torch.reshape(symbols, symbols_shape)
@@ -424,8 +425,3 @@ if __name__ == '__main__':
     print('Decoded shape', decoded.shape)
     delta_t = time.time() - start_t
     print(f'Delta t {delta_t:.2f} s | ', torch.mean((decoded_raw == symbols).float()).item())
-
-
-    cbits = enc_shape * 32
-    print(f'Symbols compressed to {cbits:.1f} bits.')
-    print(f'Estimated entropy {bits:.3f} bits.')
