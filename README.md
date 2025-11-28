@@ -23,6 +23,7 @@ Before you begin, ensure you have the following software installed:
 
 ## 1. Setup
 
+<<<<<<< Updated upstream
 First, clone the repository and its submodules. Navigate into the project directory:
 
 ```bash
@@ -32,6 +33,13 @@ cd hific
 
 # If you have already cloned the repository without the --recursive flag, run this command:
 # git submodule update --init --recursive
+=======
+First, clone the repository and navigate into the project directory:
+
+```bash
+git clone https://github.com/mea432/hific.git
+cd hific
+>>>>>>> Stashed changes
 ```
 
 Next, install the required Python packages:
