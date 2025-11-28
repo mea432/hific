@@ -47,7 +47,11 @@ def compress(input_path, output_path, ckpt_path):
 
     for file_path in input_files:
         img = Image.open(file_path).convert('RGB')
-        tensor = torchvision.transforms.ToTensor()(img).unsqueeze(0).to(device)
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+        ])
+        tensor = transform(img).unsqueeze(0).to(device)
 
         with torch.no_grad():
             compressed_output = model.compress(tensor)
@@ -86,7 +90,7 @@ def decompress(input_path, output_path, ckpt_path):
         file_name, _ = os.path.splitext(base_name)
         output_file = os.path.join(output_path, f'{file_name}_reconstructed.png')
         
-        torchvision.utils.save_image(reconstruction, output_file, normalize=True)
+        torchvision.utils.save_image(reconstruction, output_file)
         print(f'Decompressed {file_path} to {output_file}')
 
 def main():
