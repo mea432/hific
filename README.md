@@ -23,9 +23,6 @@ Before you begin, ensure you have the following software installed:
 
 ## 1. Setup
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 First, clone the repository and its submodules. Navigate into the project directory:
 
 ```bash
