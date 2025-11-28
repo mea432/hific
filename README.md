@@ -23,36 +23,11 @@ Before you begin, ensure you have the following software installed:
 
 ## 1. Setup
 
-First, clone the repository and its submodules. Navigate into the project directory:
-
-```bash
-# Clone the repository and submodules
-git clone --recursive https://github.com/mea432/hific.git
-cd hific
-
-# If you have already cloned the repository without the --recursive flag, run this command:
-# git submodule update --init --recursive
-=======
 First, clone the repository and navigate into the project directory:
 
 ```bash
 git clone https://github.com/mea432/hific.git
 cd hific
->>>>>>> Stashed changes
-=======
-First, clone the repository and navigate into the project directory:
-
-```bash
-git clone https://github.com/mea432/hific.git
-cd hific
->>>>>>> Stashed changes
-=======
-First, clone the repository and navigate into the project directory:
-
-```bash
-git clone https://github.com/mea432/hific.git
-cd hific
->>>>>>> stash
 ```
 
 Next, install the required Python packages:
