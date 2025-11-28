@@ -23,6 +23,7 @@ Before you begin, ensure you have the following software installed:
 
 ## 1. Setup
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 First, clone the repository and its submodules. Navigate into the project directory:
@@ -48,6 +49,13 @@ First, clone the repository and navigate into the project directory:
 git clone https://github.com/mea432/hific.git
 cd hific
 >>>>>>> Stashed changes
+=======
+First, clone the repository and navigate into the project directory:
+
+```bash
+git clone https://github.com/mea432/hific.git
+cd hific
+>>>>>>> stash
 ```
 
 Next, install the required Python packages:
