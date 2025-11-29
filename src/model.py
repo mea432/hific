@@ -13,13 +13,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # Custom modules
-from src import hyperprior
-from src.loss import losses
-from src.helpers import maths, datasets, utils
-from src.network import encoder, generator, discriminator, hyper
-from src.loss.perceptual_similarity import perceptual_loss as ps 
+from hific.src import hyperprior
+from hific.src.loss import losses
+from hific.src.helpers import maths, datasets, utils
+from hific.src.network import encoder, generator, discriminator, hyper
+from hific.src.loss.perceptual_similarity import perceptual_loss as ps 
 
-from default_config import ModelModes, ModelTypes, hific_args, directories
+from hific.default_config import ModelModes, ModelTypes, hific_args, directories
 
 Intermediates = namedtuple("Intermediates",
     ["input_image",             # [0, 1] (after scaling from [0, 255])

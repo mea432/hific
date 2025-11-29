@@ -6,9 +6,9 @@ import torchvision
 from torch.utils.data import Dataset
 from PIL import Image
 
-from src.helpers import utils
-from src.compression import compression_utils
-from default_config import ModelModes
+from hific.src.helpers import utils
+from hific.src.compression import compression_utils
+from hific.default_config import ModelModes
 
 class DummyLogger:
     def info(self, *args, **kwargs):

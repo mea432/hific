@@ -5,9 +5,9 @@ import numpy as np
 from collections import namedtuple
 
 # Custom
-from src.network import hyper
-from src.helpers import maths, utils
-from src.compression import hyperprior_model, prior_model
+from hific.src.network import hyper
+from hific.src.helpers import maths, utils
+from hific.src.compression import hyperprior_model, prior_model
 
 MIN_SCALE = 0.11
 LOG_SCALES_MIN = -3.

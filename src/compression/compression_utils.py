@@ -9,8 +9,8 @@ from autograd import make_vjp
 from autograd.extend import vspace, VSpace
 from collections import namedtuple
 
-from src.helpers import utils
-from src.compression import entropy_coding
+from hific.src.helpers import utils
+from hific.src.compression import entropy_coding
 
 # Random bits for fencing in bitstream
 _MAGIC_VALUE_SEP = b'\x46\xe2\x84\x92'

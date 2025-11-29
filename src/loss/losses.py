@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from src.helpers.utils import get_scheduled_params
+from hific.src.helpers.utils import get_scheduled_params
 
 def weighted_rate_loss(config, total_nbpp, total_qbpp, step_counter, ignore_schedule=False):
     """

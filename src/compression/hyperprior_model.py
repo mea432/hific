@@ -5,9 +5,9 @@ import numpy as np
 from tqdm import tqdm
 
 # Custom
-from src.helpers import maths, utils
-from src.compression import entropy_models, entropy_coding
-from src.compression import compression_utils
+from hific.src.helpers import maths, utils
+from hific.src.compression import entropy_models, entropy_coding
+from hific.src.compression import compression_utils
 
 MIN_SCALE = entropy_models.MIN_SCALE
 MIN_LIKELIHOOD = entropy_models.MIN_LIKELIHOOD

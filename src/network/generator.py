@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 # Custom
-from src.normalisation import channel, instance
+from hific.src.normalisation import channel, instance
 
 class ResidualBlock(nn.Module):
     def __init__(self, input_dims, kernel_size=3, stride=1, 

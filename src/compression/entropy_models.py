@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 
 # Custom
-from src.helpers import maths
+from hific.src.helpers import maths
 
 MIN_SCALE = 0.11
 MIN_LIKELIHOOD = 1e-9

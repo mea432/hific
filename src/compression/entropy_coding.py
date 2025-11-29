@@ -16,12 +16,12 @@ from warnings import warn
 from collections import namedtuple
 
 # Custom
-from src.helpers import maths, utils
-from src.compression import ans as vrans
-from src.compression import compression_utils
+from hific.src.helpers import maths, utils
+from hific.src.compression import ans as vrans
+from hific.src.compression import compression_utils
 
 # Import the time_this decorator
-from src.helpers.utils import time_this
+from hific.src.helpers.utils import time_this
 
 Codec = namedtuple('Codec', ['push', 'pop'])
 cast2u64 = lambda x: np.array(x, dtype=np.uint64)

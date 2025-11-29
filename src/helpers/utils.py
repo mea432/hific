@@ -172,7 +172,7 @@ def load_model(save_path, logger, device, model_type=None, model_mode=None, curr
     strict=False, silent=False, use_cpp=True):
 
     start_time = time.time()
-    from src.model import Model
+    from hific.src.model import Model
     checkpoint = torch.load(save_path, map_location=device)
     loaded_args_d = checkpoint['args']
 

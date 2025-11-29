@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.helpers import maths
+from hific.src.helpers import maths
 lower_bound_toward = maths.LowerBoundToward.apply
 
 def get_num_DLMM_channels(C, K=4, params=['mu','scale','mix']):

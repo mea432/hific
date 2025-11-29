@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from src.normalisation import channel, instance
+from hific.src.normalisation import channel, instance
 
 class Encoder(nn.Module):
     def __init__(self, image_dims, batch_size, activation='relu', C=220,
