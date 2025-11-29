@@ -25,7 +25,6 @@ checkpoints/
 
 # C extensions
 *.so
-src/cpp/build/
 
 # Distribution / packaging
 .Python
@@ -148,9 +147,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# VSCode
-.vscode/
 
 # Misc
 

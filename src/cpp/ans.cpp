@@ -279,5 +279,3 @@ PYBIND11_MODULE(hific_cpp, m) {
     m.def("ans_index_encoder_flush", &ans_index_encoder_flush, "ANS encoder flush");
     m.def("ans_index_decoder", &ans_index_decoder, "ANS decoder");
 }
-
-
