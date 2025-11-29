@@ -18,39 +18,44 @@ Before you begin, ensure you have the following software installed:
 
 * [Git](https://git-scm.com/downloads)
 * [Python](https://www.python.org/downloads/) (3.8+ recommended)
-* [CMake](https://cmake.org/download/)
+* A C++ compiler (e.g., GCC, Clang, or MSVC)
+* [CMake](https://cmake.org/download/) (version 3.5 or later)
 * [PyTorch](https://pytorch.org/) (Follow instructions on their website for your specific system)
 
-## 1. Setup
+## Installation
 
-First, clone the repository and navigate into the project directory:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Justin-Tan/high-fidelity-generative-compression.git
+   cd high-fidelity-generative-compression
+   ```
 
-```bash
-git clone https://github.com/mea432/hific.git
-cd hific
-```
+2. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Next, install the required Python packages:
+3. **Build and install the C++ extension:**
+   This project uses a C++ extension for entropy coding to improve performance. Build and install it by running:
+   ```bash
+   pip install .
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+## Troubleshooting
 
-Finally, build the C++ extension required for entropy coding. This command compiles and installs the extension in your current environment.
+If the `pip install .` command fails, it is likely due to issues with the C++ extension compilation. Here are some common problems and solutions:
 
-```bash
-pip install .
-```
+*   **`CMake must be installed`**: Make sure you have CMake installed and that it is available in your system's PATH.
+*   **`'torch/extension.h' file not found`**: The build script is unable to locate your PyTorch installation. Ensure that PyTorch is correctly installed in your environment. If you are using a virtual environment, make sure it is activated.
+*   **C++ compiler errors**: Ensure you have a compatible C++ compiler installed. For example, on macOS, you may need to install the Xcode Command Line Tools.
 
-To verify your setup, you can run `python hific.py --help`.
-
-## 2. Download Pre-trained Models
-
-Pretrained model weights using the OpenImages dataset can be found below (~2 GB). The examples at the end of this readme were produced using the HIFIC-med model. The same models are also hosted in the following Zenodo repository: <https://zenodo.org/record/4026003>.
-
-## 3. Usage
+## Usage
 
 This tool provides `compress` and `decompress` commands.
+
+### Download Pre-trained Models
+
+Pretrained model weights using the OpenImages dataset can be found below (~2 GB). The examples at the end of this readme were produced using the HIFIC-med model. The same models are also hosted in the following Zenodo repository: <https://zenodo.org/record/4026003>.
 
 ### Compressing an Image
 
