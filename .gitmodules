@@ -1,7 +1,0 @@
-[submodule "src/cpp/pybind11"]
-	path = src/cpp/pybind11
-	url = https://github.com/pybind/pybind11.git
-[submodule "hific"]
-	path = hific
-	url = https://github.com/mea432/hific.git
-	branch = plswork
